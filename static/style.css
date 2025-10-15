@@ -1,0 +1,11 @@
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+input[type="text"], input[type="email"], input[type="file"] {
+    transition: all 0.3s ease;
+}
+
+input:focus {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+}

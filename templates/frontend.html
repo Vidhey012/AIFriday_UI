@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenAI Friday - Enterprise Platform</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        #textInputWrapper {
+            position: relative;
+        }
+        #micButton {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            cursor: pointer;
+        }
+        #dropArea {
+            min-height: 300px;
+        }
+        #inputCard {
+            min-height: 350px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white shadow-md py-4 px-6 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-800">GenAI Friday</h1>
+        <h2 class="text-xl font-semibold text-gray-600">TCS Enterprise</h2>
+    </header>
+
+    <main class="flex-grow container mx-auto my-10 px-4">
+
+        <!-- Input Card -->
+        <div id="inputCard" class="bg-white p-6 rounded-lg shadow-xl max-w-6xl mx-auto flex flex-col">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-700">Data & Query Center</h2>
+
+            <div class="flex flex-col lg:flex-row gap-6">
+
+                <!-- Left: Drag & Drop -->
+                <div id="dropArea" class="flex-1 border-2 border-dashed border-gray-300 rounded p-6 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all duration-300">
+                    <p id="dropText" class="text-gray-400 mb-2 text-center text-lg font-medium">Drag & Drop your file here</p>
+                    <p class="text-sm text-gray-400">or click anywhere in the box to select</p>
+                    <input type="file" name="file" id="fileInput" class="hidden">
+                </div>
+
+                <!-- Right: Text Input + Mic + Submit -->
+                <div class="flex-1 flex flex-col">
+                    <div id="textInputWrapper" class="flex-1 relative">
+                        <textarea id="textInput" placeholder="Enter your query here..." class="w-full h-full p-4 border rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12 text-gray-700 text-lg"></textarea>
+                        <button id="micButton" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-all duration-300 shadow-md">
+                            <i class="fas fa-microphone fa-lg"></i>
+                        </button>
+                    </div>
+                    <button id="submitBtn" class=" w-full mt-4 bg-green-500 text-white py-3 px-6 rounded hover:bg-green-600 transition-all duration-300 font-semibold shadow-lg">
+                        Submit
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="bg-white p-6 rounded-lg shadow-xl max-w-6xl mx-auto mt-8 hidden">
+            <h3 class="text-2xl font-bold mb-4 text-gray-700">Results Overview</h3>
+            <div id="resultsContent" class="text-gray-700 space-y-2 text-lg"></div>
+        </div>
+
+    </main>
+
+    <footer class="bg-white shadow-inner py-4 text-center text-gray-500">
+        &copy; 2025 GenAI Friday. All rights reserved.
+    </footer>
+
+    <script>
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const dropText = document.getElementById('dropText');
+        const submitBtn = document.getElementById('submitBtn');
+        const resultsDiv = document.getElementById('results');
+        const resultsContent = document.getElementById('resultsContent');
+        const textInput = document.getElementById('textInput');
+        const micButton = document.getElementById('micButton');
+
+        // Click on drop area to select file
+        dropArea.addEventListener('click', () => fileInput.click());
+
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.classList.add('border-blue-500', 'bg-blue-50');
+        });
+
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.classList.remove('border-blue-500', 'bg-blue-50');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.classList.remove('border-blue-500', 'bg-blue-50');
+            const files = e.dataTransfer.files;
+            if(files.length > 0){
+                fileInput.files = files;
+                dropText.textContent = `Selected file: ${files[0].name}`;
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if(fileInput.files.length > 0){
+                dropText.textContent = `Selected file: ${fileInput.files[0].name}`;
+            } else {
+                dropText.textContent = 'Drag & Drop your file here';
+            }
+        });
+
+        // Voice recognition
+        if('webkitSpeechRecognition' in window){
+            const recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            micButton.addEventListener('click', () => recognition.start());
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                textInput.value = transcript;
+            };
+
+            recognition.onerror = (event) => console.error(event.error);
+        } else {
+            micButton.disabled = true;
+            micButton.textContent = '<i class="fas fa-microphone fa-lg"></i> Not Supported';
+        }
+
+        // Submit handler
+        submitBtn.addEventListener('click', async () => {
+            if(!fileInput.files[0] && !textInput.value.trim()){
+                alert('Please select a file or enter text!');
+                return;
+            }
+
+            const formData = new FormData();
+            if(fileInput.files[0]) formData.append('file', fileInput.files[0]);
+            formData.append('text', textInput.value.trim());
+
+            const response = await fetch('/submit', {
+                method: 'POST',
+                body: formData
+            });
+
+            if(response.ok){
+                const data = await response.json();
+                resultsContent.innerHTML = `
+                    ${data.name ? `<p><strong>Name:</strong> ${data.name}</p>` : ''}
+                    ${data.email ? `<p><strong>Email:</strong> ${data.email}</p>` : ''}
+                    ${data.file_url ? `<p><strong>File:</strong> <a href="${data.file_url}" target="_blank" class="text-blue-500 hover:underline">Download</a></p>` : ''}
+                    ${data.text ? `<p><strong>Text:</strong> ${data.text}</p>` : ''}
+                `;
+                resultsDiv.classList.remove('hidden');
+                fileInput.value = '';
+                textInput.value = '';
+                dropText.textContent = 'Drag & Drop your file here';
+            } else {
+                alert('Submission failed.');
+            }
+        });
+    </script>
+</body>
+</html>
